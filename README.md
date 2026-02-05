@@ -36,3 +36,4 @@ Sistema completo de gestão para o JS Beauty Studio, gerenciando financeiro, com
 2. (Pendente) Inicialização do Backend e Frontend via scripts de setup.
 # SISTEMA-GESTAO-JS
 # SISTEMA-GESTAO-BEAUTY
+# SISTEMA-GESTAO-BEAUTY
