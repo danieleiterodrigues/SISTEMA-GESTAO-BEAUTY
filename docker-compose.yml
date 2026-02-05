@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: jsbeauty_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: jsbeauty
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_v2:/var/lib/postgresql/data
+    networks:
+      - jsbeauty_network
+
+  # Backend e Frontend serão ativados após a inicialização dos projetos
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: jsbeauty_backend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - DATABASE_URL=postgresql://user:password@postgres:5432/jsbeauty?schema=public
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - jsbeauty_network
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: jsbeauty_frontend
+  #   ports:
+  #     - "5173:5173"
+  #   networks:
+  #     - jsbeauty_network
+
+volumes:
+  postgres_data_v2:
+
+networks:
+  jsbeauty_network:
+    driver: bridge
