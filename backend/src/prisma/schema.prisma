@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           Int          @id @default(autoincrement())
+  nome         String       @db.VarChar(100)
+  email        String       @unique @db.VarChar(100)
+  senhaHash    String       @map("senha_hash") @db.VarChar(255)
+  perfil       Perfil
+  ativo        Boolean      @default(true)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  
+  colaborador  Colaborador?
+
+  @@map("usuarios")
+}
+
+model Cliente {
+  id              Int          @id @default(autoincrement())
+  nome            String       @db.VarChar(100)
+  apelido         String?      @db.VarChar(50)
+  telefone        String       @db.VarChar(20)
+  email           String?      @db.VarChar(100)
+  instagram       String?      @db.VarChar(50)
+  dataNascimento  DateTime?    @map("data_nascimento") @db.Date
+  cpf             String?      @unique @db.VarChar(14)
+  endereco        String?      @db.Text
+  cidade          String?      @db.VarChar(100)
+  estado          String?      @db.VarChar(2)
+  cep             String?      @db.VarChar(9)
+  observacoes     String?      @db.Text
+  status          StatusCliente @default(ativo)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  ultimaVisita    DateTime?    @map("ultima_visita")
+  
+  atendimentos    Atendimento[]
+
+  vendas          Venda[]
+  pacotesComprados PacoteVenda[]
+
+  @@index([nome])
+  @@index([telefone])
+  @@index([cpf])
+  @@map("clientes")
+}
+
+model Colaborador {
+  id              Int          @id @default(autoincrement())
+  nome            String       @db.VarChar(100)
+  tipo            TipoColaborador
+  telefone        String?      @db.VarChar(20)
+  email           String?      @db.VarChar(100)
+  cpf             String?      @unique @db.VarChar(14)
+  dataAdmissao    DateTime?    @map("data_admissao") @db.Date
+  comissaoPadrao  Decimal?     @map("comissao_padrao") @db.Decimal(5, 2)
+  usuarioId       Int?         @unique @map("usuario_id")
+  ativo           Boolean      @default(true)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  
+  usuario         Usuario?     @relation(fields: [usuarioId], references: [id])
+  atendimentos    Atendimento[]
+  comissoes       Comissao[]
+
+  @@map("colaboradores")
+}
+
+model Servico {
+  id                Int          @id @default(autoincrement())
+  nome              String       @db.VarChar(100)
+  descricao         String?      @db.Text
+  categoriaId       Int?         @map("categoria_id") // Relation to Categoria
+  duracaoMinutos    Int          @map("duracao_minutos")
+  valor             Decimal      @db.Decimal(10, 2)
+  valorCusto        Decimal?     @map("valor_custo") @db.Decimal(10, 2) // New field
+  comissaoTipo      ComissaoTipo? @map("comissao_tipo") // Nullable
+  comissaoValor     Decimal?     @map("comissao_valor") @db.Decimal(10, 2) // Nullable
+  ativo             Boolean      @default(true)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  
+  categoria         Categoria?   @relation(fields: [categoriaId], references: [id])
+  atendimentoServicos AtendimentoServico[]
+  pacoteServicos      PacoteServico[]
+
+  @@map("servicos")
+}
+
+model Categoria {
+  id        Int       @id @default(autoincrement())
+  nome      String    @unique @db.VarChar(50)
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  
+  servicos  Servico[]
+
+
+  @@map("categorias")
+}
+
+model Pacote {
+  id              Int          @id @default(autoincrement())
+  nome            String       @db.VarChar(100)
+  descricao       String?      @db.Text
+  valor           Decimal      @db.Decimal(10, 2)
+  validadeDias    Int?         @map("validade_dias")
+  ativo           Boolean      @default(true)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  
+  servicos        PacoteServico[]
+  vendas          PacoteVenda[]
+
+  @@map("pacotes")
+}
+
+model PacoteServico {
+  id          Int      @id @default(autoincrement())
+  pacoteId    Int      @map("pacote_id")
+  servicoId   Int      @map("servico_id")
+  quantidade  Int      @default(1)
+  
+  pacote      Pacote   @relation(fields: [pacoteId], references: [id])
+  servico     Servico  @relation(fields: [servicoId], references: [id])
+
+  @@map("pacote_servicos")
+}
+
+model Produto {
+  id              Int          @id @default(autoincrement())
+  nome            String       @db.VarChar(100)
+  descricao       String?      @db.Text
+  codigoBarras    String?      @map("codigo_barras") @db.VarChar(50)
+  categoria       String?      @db.VarChar(50)
+  valorCusto      Decimal?     @map("valor_custo") @db.Decimal(10, 2)
+  valorVenda      Decimal      @map("valor_venda") @db.Decimal(10, 2)
+  estoqueAtual    Int          @default(0) @map("estoque_atual")
+  estoqueMinimo   Int          @default(0) @map("estoque_minimo")
+  ativo           Boolean      @default(true)
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@map("produtos")
+}
+
+model PacoteVenda {
+  id          Int      @id @default(autoincrement())
+  clienteId   Int      @map("cliente_id")
+  pacoteId    Int      @map("pacote_id")
+  dataVenda   DateTime @default(now()) @map("data_venda") @db.Date
+  dataEvento  DateTime @map("data_evento") @db.Date
+  valorTotal  Decimal  @map("valor_total") @db.Decimal(10, 2)
+  valorPago   Decimal  @default(0) @map("valor_pago") @db.Decimal(10, 2)
+  status      StatusPacoteVenda @default(ativo)
+  observacoes String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  pacote      Pacote   @relation(fields: [pacoteId], references: [id])
+
+  @@map("pacote_vendas")
+  @@index([dataEvento])
+  @@index([status])
+  @@index([clienteId])
+}
+
+model Atendimento {
+  id                Int          @id @default(autoincrement())
+  clienteId         Int          @map("cliente_id")
+  colaboradorId     Int?         @map("colaborador_id")
+  tipo              TipoAtendimento @default(atendimento_comum)
+  dataAtendimento   DateTime     @map("data_atendimento") @db.Date
+  horarioInicio     DateTime?    @map("horario_inicio") @db.Time
+  horarioFim        DateTime?    @map("horario_fim") @db.Time
+  status            StatusAtendimento
+  valorTotal        Decimal      @default(0) @map("valor_total") @db.Decimal(10, 2)
+  valorPago         Decimal      @default(0) @map("valor_pago") @db.Decimal(10, 2)
+  observacoes       String?      @db.Text
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  
+  cliente           Cliente      @relation(fields: [clienteId], references: [id])
+  colaborador       Colaborador? @relation(fields: [colaboradorId], references: [id])
+  servicos          AtendimentoServico[]
+  vendas            Venda[]
+
+  @@index([dataAtendimento])
+  @@index([clienteId])
+  @@index([colaboradorId])
+  @@index([tipo])
+  @@map("atendimentos")
+}
+
+model AtendimentoServico {
+  id              Int          @id @default(autoincrement())
+  atendimentoId   Int          @map("atendimento_id")
+  servicoId       Int          @map("servico_id")
+  quantidade      Int          @default(1)
+  valorUnitario   Decimal      @map("valor_unitario") @db.Decimal(10, 2)
+  desconto        Decimal      @default(0) @db.Decimal(10, 2)
+  
+  atendimento     Atendimento  @relation(fields: [atendimentoId], references: [id])
+  servico         Servico      @relation(fields: [servicoId], references: [id])
+  comissoes       Comissao[]
+
+  @@map("atendimento_servicos")
+}
+
+model Venda {
+  id                Int          @id @default(autoincrement())
+  clienteId         Int          @map("cliente_id")
+  atendimentoId     Int?         @map("atendimento_id")
+  tipoVenda         TipoVenda    @map("tipo_venda")
+  dataVenda         DateTime     @map("data_venda") @db.Date
+  valorTotal        Decimal      @map("valor_total") @db.Decimal(10, 2)
+  desconto          Decimal      @default(0) @db.Decimal(10, 2)
+  valorFinal        Decimal      @map("valor_final") @db.Decimal(10, 2)
+  formaPagamento    FormaPagamento @map("forma_pagamento")
+  statusPagamento   StatusPagamento @map("status_pagamento")
+  parcelas          Int          @default(1)
+  taxaMaquininha    Decimal?     @map("taxa_maquininha") @db.Decimal(5, 2)
+  observacoes       String?      @db.Text
+  createdAt         DateTime     @default(now()) @map("created_at")
+  
+  cliente           Cliente      @relation(fields: [clienteId], references: [id])
+  atendimento       Atendimento? @relation(fields: [atendimentoId], references: [id])
+  parcelasList      Parcela[]
+  comissoes         Comissao[]
+
+  @@index([dataVenda])
+  @@index([clienteId])
+  @@map("vendas")
+}
+
+model Parcela {
+  id              Int          @id @default(autoincrement())
+  vendaId         Int          @map("venda_id")
+  numeroParcela   Int          @map("numero_parcela")
+  valorParcela    Decimal      @map("valor_parcela") @db.Decimal(10, 2)
+  dataVencimento  DateTime     @map("data_vencimento") @db.Date
+  dataPagamento   DateTime?    @map("data_pagamento") @db.Date
+  status          StatusParcela @default(pendente)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  
+  venda           Venda        @relation(fields: [vendaId], references: [id])
+
+  @@map("parcelas")
+}
+
+model Despesa {
+  id                Int          @id @default(autoincrement())
+  descricao         String       @db.VarChar(200)
+  categoria         String       @db.VarChar(50)
+  valor             Decimal      @db.Decimal(10, 2)
+  dataVencimento    DateTime     @map("data_vencimento") @db.Date
+  dataPagamento     DateTime?    @map("data_pagamento") @db.Date
+  status            StatusDespesa
+  recorrente        Boolean      @default(false)
+  periodicidade     PeriodicidadeDespesa?
+  formaPagamento    String?      @map("forma_pagamento") @db.VarChar(50)
+  observacoes       String?      @db.Text
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  @@index([dataVencimento])
+  @@map("despesas")
+}
+
+// ... (rest of the file content until enums)
+
+
+model Comissao {
+  id                   Int                @id @default(autoincrement())
+  colaboradorId        Int                @map("colaborador_id")
+  vendaId              Int?               @map("venda_id")
+  atendimentoServicoId Int?               @map("atendimento_servico_id")
+  valorBase            Decimal            @map("valor_base") @db.Decimal(10, 2)
+  percentual           Decimal?           @db.Decimal(5, 2)
+  valorComissao        Decimal            @map("valor_comissao") @db.Decimal(10, 2)
+  dataReferencia       DateTime           @map("data_referencia") @db.Date
+  status               StatusComissao     @default(pendente)
+  dataPagamento        DateTime?          @map("data_pagamento") @db.Date
+  createdAt            DateTime           @default(now()) @map("created_at")
+
+  colaborador          Colaborador        @relation(fields: [colaboradorId], references: [id])
+  venda                Venda?             @relation(fields: [vendaId], references: [id])
+  atendimentoServico   AtendimentoServico? @relation(fields: [atendimentoServicoId], references: [id])
+
+  @@index([colaboradorId])
+  @@index([status])
+  @@index([dataReferencia])
+  @@index([vendaId])
+  @@map("comissoes")
+}
+
+model TaxaMaquininha {
+  id             Int           @id @default(autoincrement())
+  bandeira       String        @db.VarChar(50)
+  tipoTransacao  TipoTransacao @map("tipo_transacao")
+  parcelas       Int           @default(1)
+  taxaPercentual Decimal       @map("taxa_percentual") @db.Decimal(5, 2)
+  ativo          Boolean       @default(true)
+
+  @@unique([bandeira, tipoTransacao, parcelas])
+  @@map("taxas_maquininha")
+}
+
+enum PeriodicidadeDespesa {
+  mensal
+  bimestral
+  trimestral
+  semestral
+  anual
+}
+
+enum Perfil {
+  admin
+  gerente
+  atendente
+  profissional
+}
+
+enum StatusCliente {
+  ativo
+  inativo
+  prospecto
+}
+
+enum TipoColaborador {
+  profissional
+  administrativo
+}
+
+enum ComissaoTipo {
+  percentual
+  fixo
+}
+
+enum StatusAtendimento {
+  agendado
+  em_atendimento
+  concluido
+  cancelado
+}
+
+enum TipoVenda {
+  servico
+  pacote
+  produto
+}
+
+enum FormaPagamento {
+  dinheiro
+  debito
+  credito
+  pix
+  transferencia
+}
+
+enum StatusPagamento {
+  pendente
+  parcial
+  pago
+  cancelado
+}
+
+enum StatusParcela {
+  pendente
+  pago
+  vencido
+}
+
+enum StatusDespesa {
+  pendente
+  pago
+  vencido
+  cancelado
+}
+
+enum StatusComissao {
+  pendente
+  pago
+}
+
+enum TipoTransacao {
+  debito
+  credito
+}
+
+enum TipoAtendimento {
+  servico_social
+  atendimento_comum
+}
+
+enum StatusPacoteVenda {
+  ativo
+  quitado
+  cancelado
+}
